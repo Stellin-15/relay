@@ -45,13 +45,13 @@ impl Agent for OpenCodeAgent {
         let tmp = std::env::temp_dir().join("relay_handoff.md");
         std::fs::write(&tmp, handoff_prompt)?;
 
-        // `opencode <arg>` treats the positional as a *project path* and
-        // tries to open it — a multi-KB handoff prompt then fails with
-        // ENAMETOOLONG. The message goes through the `run` subcommand
-        // (`opencode run [message..]`) instead; current_dir sets the project.
+        // Open the interactive opencode TUI seeded with the handoff via the
+        // TUI's `--prompt` flag, so the user keeps working in the session.
+        // (A bare positional is read as a project path → ENAMETOOLONG;
+        // `run` executes one-shot and exits — neither is a live handoff.)
         let status = Command::new(&binary)
             .current_dir(project_dir)
-            .arg("run")
+            .arg("--prompt")
             .arg(handoff_prompt)
             .stdin(std::process::Stdio::inherit())
             .stdout(std::process::Stdio::inherit())
