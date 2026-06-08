@@ -60,9 +60,13 @@ impl Agent for CodexAgent {
         // Launch Codex INTERACTIVELY with the handoff as the initial prompt.
         // This opens the Codex TUI so the user can keep working with it.
         // stdin/stdout/stderr are inherited so the user sees the Codex UI.
+        //
+        // Note: no `--full-auto` — newer Codex (0.133+) removed that flag
+        // (`codex [OPTIONS] [PROMPT]`, interactive by default), so passing
+        // it errors with "unexpected argument". Default interactive approval
+        // is the right fit for a handoff anyway: the user is present.
         let status = Command::new(&binary)
             .current_dir(project_dir)
-            .arg("--full-auto")
             .arg("-m")
             .arg(&self.model)
             .arg(handoff_prompt)
