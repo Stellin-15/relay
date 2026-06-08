@@ -45,14 +45,28 @@ impl Agent for OpenCodeAgent {
         let tmp = std::env::temp_dir().join("relay_handoff.md");
         std::fs::write(&tmp, handoff_prompt)?;
 
-        // Open the interactive opencode TUI seeded with the handoff via the
-        // TUI's `--prompt` flag, so the user keeps working in the session.
-        // (A bare positional is read as a project path → ENAMETOOLONG;
-        // `run` executes one-shot and exits — neither is a live handoff.)
+        // Write the handoff into the project so opencode can read it with a
+        // short path, then open the interactive TUI seeded with a *short*
+        // --prompt that points at it.
+        //
+        // Why not pass the handoff text directly: a bare positional is read
+        // as a project path, and a large `--prompt` value is also opened as
+        // a path — both blow up with ENAMETOOLONG once the handoff exceeds a
+        // KB or so. `run` tolerates the big message but is one-shot and
+        // exits, so it isn't a live handoff. A short prompt that tells the
+        // agent to read the saved file keeps the TUI interactive *and*
+        // delivers the full context.
+        let relay_dir = std::path::Path::new(project_dir).join(".relay");
+        let _ = std::fs::create_dir_all(&relay_dir);
+        let handoff_path = relay_dir.join("handoff-latest.md");
+        std::fs::write(&handoff_path, handoff_prompt)?;
+
+        let seed = "A coding session was just handed off to you. Read the handoff context in .relay/handoff-latest.md, briefly summarize where the previous session left off, then continue from there.";
+
         let status = Command::new(&binary)
             .current_dir(project_dir)
             .arg("--prompt")
-            .arg(handoff_prompt)
+            .arg(seed)
             .stdin(std::process::Stdio::inherit())
             .stdout(std::process::Stdio::inherit())
             .stderr(std::process::Stdio::inherit())

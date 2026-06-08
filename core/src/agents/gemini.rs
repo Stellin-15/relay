@@ -52,17 +52,27 @@ impl Agent for GeminiAgent {
     }
 
     fn execute(&self, handoff_prompt: &str, project_dir: &str) -> Result<HandoffResult> {
-        // Try Gemini CLI first
-        if find_binary("gemini").is_some() {
-            let mut child = std::process::Command::new("gemini")
+        // Prefer the locally installed Gemini CLI — a live, interactive
+        // handoff into the user's own gemini, not a one-shot API call.
+        // `-i/--prompt-interactive` runs the handoff prompt and then stays
+        // in the interactive TUI. stdio is inherited so the user lands in it.
+        if let Some(binary) = find_binary("gemini") {
+            let status = std::process::Command::new(&binary)
                 .current_dir(project_dir)
+                .arg("-i")
                 .arg(handoff_prompt)
-                .spawn()?;
-            let _ = child.wait();
+                .stdin(std::process::Stdio::inherit())
+                .stdout(std::process::Stdio::inherit())
+                .stderr(std::process::Stdio::inherit())
+                .status()?;
             return Ok(HandoffResult {
                 agent: "gemini".into(),
-                success: true,
-                message: "Gemini CLI launched with handoff context".into(),
+                success: status.success(),
+                message: if status.success() {
+                    "Gemini CLI session ended".into()
+                } else {
+                    format!("Gemini CLI exited with code {:?}", status.code())
+                },
                 handoff_file: None,
             });
         }
