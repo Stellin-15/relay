@@ -53,8 +53,8 @@ pub fn list_handoffs(project_dir: &Path, limit: usize) -> Result<Vec<HandoffEntr
             filename,
             timestamp,
             agent: agent.unwrap_or_else(|| "unknown".into()),
-            task: if task.len() > 60 {
-                format!("{}...", &task[..57])
+            task: if task.chars().count() > 60 {
+                format!("{}...", task.chars().take(57).collect::<String>())
             } else {
                 task
             },
